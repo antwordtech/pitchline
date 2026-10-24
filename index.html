@@ -105,8 +105,8 @@ const dec=o=>{if(o==null)return null;if(typeof o=="number")return o;if(o.decimal
 const frac=o=>o&&(o.fraction||o.displayValue||o.summary)||"";
 const amer=o=>o&&(o.american||o.alternateDisplayValue)||"";
 const f2=n=>n==null||isNaN(n)?"–":(+n).toFixed(2);
-const words=k=>k.replace(/([a-z])([A-Z])/g," $1 $2").replace(/\b\w/g,c=>c.toUpperCase());
-const mv=(o,c)=>{const a=dec(o),b=dec(c);if(a==null||b==null||a==b)return"";return b>a?`<span class="up"> ▲ ${f2(b)}</span>`:`<span class="dn"> ▼ ${f2(b)}</span>`};
+const words=k=>k.replace(/([a-z])([A-Z])/g,"$1 $2").replace(/\b\w/g,c=>c.toUpperCase());
+const mv=(o,c)=>{const a=dec(o),b=dec(c);if(a==null||b==null||a==b)return"";return b>a?`<span class="up"> ▲</span>`:`<span class="dn"> ▼</span>`};
 async function matchPage(id){
   const my=++rid;V.innerHTML='<a class="back" href="#">← All matches</a><div class="empty">Loading match…</div>';
   try{await loadMatch(id,my)}catch(e){V.innerHTML='<a class="back" href="#">← All matches</a><div class="empty">Could not load this match ('+esc(e.message)+')</div>';return}}
