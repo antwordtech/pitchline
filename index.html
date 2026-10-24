@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pitchline</title>
+<style>
+:root{--bg:#0b1220;--card:#121b2e;--line:#1f2b45;--tx:#e8eefc;--mu:#8fa0c4;--ac:#22c55e;--live:#ef4444;--gold:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:20px}h1 b{color:var(--ac)}
+.tabs{display:flex;gap:6px;margin-left:auto}.tabs button{background:var(--card);color:var(--mu);border:1px solid var(--line);padding:8px 14px;border-radius:999px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--ac);color:#04210f;border-color:var(--ac);font-weight:600}
+main{max-width:900px;margin:0 auto;padding:16px}
+.lg{margin:18px 0 8px;color:var(--mu);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.m{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:10px}.row .t{flex:1}.sc{font-weight:700;font-size:18px;min-width:56px;text-align:center}
+.st{font-size:12px;color:var(--mu);min-width:64px;text-align:right}.st.live{color:var(--live);font-weight:700}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--live);margin-right:5px;animation:p 1.2s infinite}@keyframes p{50%{opacity:.25}}
+.odds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.o{background:#0e1627;border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center}
+.o small{display:block;color:var(--mu);font-size:11px}.o b{font-size:16px}.o i{display:block;font-style:normal;font-size:11px;color:var(--gold)}
+.bar{height:5px;border-radius:3px;background:var(--line);display:flex;overflow:hidden;margin-top:8px}.bar span:nth-child(1){background:var(--ac)}.bar span:nth-child(2){background:#64748b}.bar span:nth-child(3){background:#3b82f6}
+.meta{display:flex;justify-content:space-between;color:var(--mu);font-size:12px;margin-bottom:6px}
+select,input{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit}
+.bar2{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.bar2 input{flex:1;min-width:140px}
+footer{color:var(--mu);font-size:12px;padding:20px 16px 40px;text-align:center}
+.empty{color:var(--mu);padding:30px;text-align:center}
+</style></head><body>
+<header><h1>Pitch<b>line</b></h1><div class="tabs"><button id="tl" class="on">Live scores</button><button id="to">Odds</button></div></header>
+<main><div id="view"></div></main>
+<footer id="foot">Information only. No bets are taken here. 18+ · Gamble responsibly.</footer>
+<script>
+const LG={"eng.1":"England · Premier League","eng.2":"England · Championship","esp.1":"Spain · La Liga","ger.1":"Germany · Bundesliga","ita.1":"Italy · Serie A","fra.1":"France · Ligue 1","ned.1":"Netherlands · Eredivisie","por.1":"Portugal · Primeira Liga","uefa.champions":"UEFA Champions League","uefa.europa":"UEFA Europa League","gha.1":"Ghana · Premier League","nga.1":"Nigeria · Professional League","usa.1":"USA · MLS","bra.1":"Brazil · Serie A","arg.1":"Argentina · Primera","caf.champions":"CAF Champions League"};
+const $=s=>document.querySelector(s),V=$("#view");let tab="live",timer,odds=null,lf="",q="";
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function setTab(t){tab=t;$("#tl").className=t=="live"?"on":"";$("#to").className=t=="odds"?"on":"";clearInterval(timer);if(t=="live"){loadLive();timer=setInterval(loadLive,30000)}else loadOdds()}
+$("#tl").onclick=()=>setTab("live");$("#to").onclick=()=>setTab("odds");
+async function loadLive(){
+  const rs=await Promise.all(Object.keys(LG).map(k=>fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${k}/scoreboard`).then(r=>r.json()).then(j=>({k,ev:j.events||[]})).catch(()=>({k,ev:[]}))));
+  if(tab!="live")return;
+  const rank={in:0,pre:1,post:2};let html="",total=0,live=0;
+  for(const {k,ev} of rs){if(!ev.length)continue;
+    ev.sort((a,b)=>rank[a.status.type.state]-rank[b.status.type.state]||new Date(a.date)-new Date(b.date));
+    html+=`<div class="lg">${LG[k]}</div>`;
+    for(const e of ev){total++;const c=e.competitions[0].competitors,h=c.find(x=>x.homeAway=="home"),a=c.find(x=>x.homeAway=="away"),s=e.status.type,L=s.state=="in";if(L)live++;
+      const st=L?`<span class="dot"></span>${esc(e.status.displayClock||"LIVE")}`:s.state=="pre"?new Date(e.date).toLocaleString([],{weekday:"short",hour:"2-digit",minute:"2-digit"}):esc(s.shortDetail||"FT");
+      const sc=s.state=="pre"?"–":`${h.score} - ${a.score}`;
+      html+=`<div class="m"><div class="row"><div class="t">${esc(h.team.displayName)}<br>${esc(a.team.displayName)}</div><div class="sc">${sc}</div><div class="st ${L?"live":""}">${st}</div></div></div>`}}
+  V.innerHTML=`<div class="meta"><span>${total} matches · ${live} live now</span><span>updates every 30s · ${new Date().toLocaleTimeString()}</span></div>`+(html||'<div class="empty">No matches right now.</div>')}
+async function loadOdds(){
+  V.innerHTML='<div class="empty">Loading…</div>';
+  if(!odds)odds=await fetch("data/odds.json?"+Date.now()).then(r=>r.json());
+  if(tab!="odds")return;renderOdds()}
+function renderOdds(){
+  const lgs=[...new Set(odds.fixtures.map(f=>f.league))];
+  let html=`<div class="bar2"><select id="lf"><option value="">All leagues</option>${lgs.map(l=>`<option ${l==lf?"selected":""}>${esc(l)}</option>`).join("")}</select><input id="q" placeholder="Search team" value="${esc(q)}"></div><div class="meta"><span>${odds.count} upcoming matches · average market odds</span><span>updated ${new Date(odds.updated).toLocaleString()}</span></div>`;
+  let last="";
+  for(const f of [...odds.fixtures].sort((a,b)=>a.league.localeCompare(b.league)||(a.date+a.time).localeCompare(b.date+b.time))){if(lf&&f.league!=lf)continue;if(q&&!(f.home+f.away).toLowerCase().includes(q.toLowerCase()))continue;
+    if(f.league!=last){html+=`<div class="lg">${esc(f.league)}</div>`;last=f.league}
+    const inv=f.avg.map(x=>1/x),sum=inv.reduce((a,b)=>a+b),p=inv.map(x=>x/sum*100);
+    const cell=(n,i)=>`<div class="o"><small>${n}</small><b>${f.avg[i].toFixed(2)}</b><i>best ${f.max[i].toFixed(2)}</i></div>`;
+    html+=`<div class="m"><div class="row"><div class="t"><b>${esc(f.home)}</b> vs <b>${esc(f.away)}</b></div><div class="st">${f.date.slice(5)} ${f.time}</div></div>
+    <div class="odds">${cell("Home",0)}${cell("Draw",1)}${cell("Away",2)}</div>
+    <div class="bar"><span style="width:${p[0]}%"></span><span style="width:${p[1]}%"></span><span style="width:${p[2]}%"></span></div>
+    <div class="meta" style="margin:6px 0 0"><span>Win chance ${p.map(x=>Math.round(x)+"%").join(" / ")}</span>${f.ou.over?`<span>Over 2.5: ${f.ou.over.toFixed(2)} · Under: ${f.ou.under.toFixed(2)}</span>`:""}</div></div>`}
+  V.innerHTML=html;
+  $("#lf").onchange=e=>{lf=e.target.value;renderOdds()};$("#q").oninput=e=>{q=e.target.value;const p=e.target.selectionStart;renderOdds();const i=$("#q");i.focus();i.setSelectionRange(p,p)}}
+setTab("live");
+</script></body></html>
